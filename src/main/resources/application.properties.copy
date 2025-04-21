@@ -1,0 +1,74 @@
+spring.application.name=
+spring.application.version=
+server.port=
+
+# PostgreSQL Database Configuration
+spring.datasource.url=
+spring.datasource.username=
+spring.datasource.password=
+# spring.datasource.url=${SPRING_DATASOURCE_URL:}
+# spring.datasource.username=${SPRING_DATASOURCE_USERNAME:}
+# spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:}
+spring.datasource.driver-class-name=
+ 
+# JPA Configuration
+spring.jpa.hibernate.ddl-auto=
+# spring.jpa.hibernate.ddl-auto=${SPRING_JPA_HIBERNATE_DDL_AUTO:}
+spring.jpa.show-sql=
+spring.jpa.properties.hibernate.dialect=
+spring.jpa.properties.hibernate.format_sql=
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=
+spring.jpa.properties.hibernate.type.preferred_uuid_jdbc_type=
+
+# Server Configuration
+server.servlet.context-path=
+
+# Swagger UI Configuration
+springdoc.swagger-ui.path=
+springdoc.swagger-ui.operationsSorter=
+springdoc.swagger-ui.tagsSorter=
+springdoc.show-actuator=
+
+spring.profiles.active=
+
+logging.level.org.hibernate.SQL=
+logging.level.org.hibernate.type.descriptor.sql.BasicBinder=
+
+# JWT Configuration
+security.jwt.secret=
+security.jwt.expiration=
+
+# Microsoft OAuth2 Configuration
+spring.security.oauth2.client.registration.microsoft.client-id=
+spring.security.oauth2.client.registration.microsoft.client-secret=
+spring.security.oauth2.client.registration.microsoft.scope=
+spring.security.oauth2.client.registration.microsoft.redirect-uri=
+spring.security.oauth2.client.registration.microsoft.authorization-grant-type=
+spring.security.oauth2.client.registration.microsoft.client-name=
+
+# Microsoft OAuth2 Provider Configuration
+spring.security.oauth2.client.provider.microsoft.authorization-uri=
+spring.security.oauth2.client.provider.microsoft.token-uri=
+spring.security.oauth2.client.provider.microsoft.user-info-uri=
+spring.security.oauth2.client.provider.microsoft.user-name-attribute=
+
+# File Upload Configuration
+file.upload-dir=
+spring.servlet.multipart.max-file-size=
+spring.servlet.multipart.max-request-size=
+
+# Email Configuration
+spring.mail.host=
+spring.mail.port=
+spring.mail.username=
+spring.mail.password=
+spring.mail.properties.mail.smtp.auth=
+spring.mail.properties.mail.smtp.starttls.enable=
+spring.mail.properties.mail.smtp.ssl.trust=
+
+# Microsoft Authentication
+microsoft.client-id=
+microsoft.client-secret=
+microsoft.redirect-uri=
+frontend.url=
+allowed.email.domain= 
