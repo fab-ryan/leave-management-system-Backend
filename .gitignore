@@ -40,3 +40,8 @@ uploads/.*
 
 /uploads/*
 uploads/.*
+
+./uploads/*
+src/main/resources/application.properties
+
+
