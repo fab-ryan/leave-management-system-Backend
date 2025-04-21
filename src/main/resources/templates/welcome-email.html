@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome to Leave Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #2196F3;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 0 0 5px 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        .credentials {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Welcome to Leave Management System</h1>
+    </div>
+    <div class="content">
+        <p>Dear <span th:text="${employeeName}">Employee</span>,</p>
+        
+        <p>Welcome to the Leave Management System! We're excited to have you on board.</p>
+        
+        <div class="credentials">
+            <p>Your temporary login credentials are:</p>
+            <p><strong>Password:</strong> <span th:text="${temporaryPassword}">temporary-password</span></p>
+            <p><strong>Note:</strong> Please change your password after your first login.</p>
+        </div>
+        
+        <p>You can access the system by visiting our login page:</p>
+        <a href="http://your-company-url/login" class="button">Login to System</a>
+        
+        <p>If you have any questions or need assistance, please contact the HR department.</p>
+        
+        <p>Best regards,<br>
+        Leave Management System</p>
+    </div>
+    <div class="footer">
+        <p>This is an automated message. Please do not reply to this email.</p>
+    </div>
+</body>
+</html> 
