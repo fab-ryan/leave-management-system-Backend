@@ -32,9 +32,12 @@ build/
 ### VS Code ###
 .vscode/
 
+### Uploaded Files ###
+/uploads/
 /uploads/*
-uploads/.*
-
-# Uploaded files
 src/main/resources/uploads/
 src/main/resources/uploads/*
+uploads/
+uploads/*
+uploads/.*
+
