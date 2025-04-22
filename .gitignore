@@ -35,14 +35,6 @@ build/
 /uploads/*
 uploads/.*
 
-/uploads/*
-uploads/.*
-
-/uploads/*
-uploads/.*
-
-./uploads/*
-src/main/resources/application.properties
-
-
-src/resources/uploads/**
+# Uploaded files
+src/main/resources/uploads/
+src/main/resources/uploads/*
