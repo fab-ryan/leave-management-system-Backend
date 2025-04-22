@@ -11,6 +11,7 @@ import com.example.leave_management.model.LeavePolicy;
 import com.example.leave_management.repository.DepartmentRepository;
 import com.example.leave_management.repository.EmployeeRepository;
 import com.example.leave_management.repository.LeavePolicyRepository;
+import com.example.leave_management.service.EmailService;
 import com.example.leave_management.service.EmployeeService;
 import com.example.leave_management.service.LeavePolicyService;
 import com.example.leave_management.util.JwtUtil;
@@ -31,6 +32,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,6 +56,8 @@ public class EmployeeServiceEmpl implements EmployeeService {
     private LeavePolicyRepository leavePolicyRepository;
 
     @Autowired
+    private EmailService emailService;
+    @Autowired
     private JwtUtil jwtUtil;
 
     @Override
@@ -69,6 +73,7 @@ public class EmployeeServiceEmpl implements EmployeeService {
             mapUserDtoToEntity(userDto, user);
             user.setPassword(passwordEncoder.encode(userDto.getPassword()));
             user.setStatus(Employee.UserStatus.ACTIVE);
+            emailService.sendWelcomeEmail(userDto.getEmail(), userDto.getName(), userDto.getPassword());
 
             if (userDto.getDepartmentId() != null) {
                 Department departmentOptional = this.departmentRepository.findById(userDto.getDepartmentId())
@@ -328,13 +333,6 @@ public class EmployeeServiceEmpl implements EmployeeService {
                         HttpStatus.NOT_FOUND, "data"));
     }
 
-    // @Override
-    // public ApiResponse<List<User>> getUsersByDepartment(String department) {
-    // List<User> users = employeeRepository.findByDepartment(department);
-    // return new ApiResponse<>("Users retrieved successfully", users, true,
-    // HttpStatus.OK, "users");
-    // }
-
     @Override
     public ApiResponse<List<Employee>> getUsersByRole(Employee.UserRole role) {
         List<Employee> users = employeeRepository.findByRole(role);
@@ -494,44 +492,64 @@ public class EmployeeServiceEmpl implements EmployeeService {
     }
 
     @Override
-    public ResponseEntity<?> handleOAuth2Login(String email, String name, String picture, UserRole role) {
-        Optional<Employee> existingEmployee = employeeRepository.findByEmail(email);
+    public ResponseEntity<?> handleOAuth2Login(String email, String name, String picture) {
+        try {
+            Optional<Employee> existingEmployee = employeeRepository.findByEmail(email);
 
-        if (existingEmployee.isPresent()) {
-            Employee employee = existingEmployee.get();
-            if (picture != null) {
-                employee.setProfilePictureUrl(picture);
-
-                employeeRepository.save(employee);
-            }
-            String token = jwtUtil.generateToken(employee);
-            Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
-            response.put("role", employee.getRole());
-            return ResponseEntity
-                    .ok(new ApiResponse<>("Login successful", response, true, HttpStatus.OK, "access_token"));
-        } else {
-            // Create new employee
-            Employee newEmployee = new Employee();
-            newEmployee.setEmail(email);
-            newEmployee.setName(name);
-            newEmployee.setProfilePictureUrl(picture);
-            if (role == UserRole.EMPLOYEE) {
-                newEmployee.setRole(UserRole.EMPLOYEE);
+            if (existingEmployee.isPresent()) {
+                Employee employee = existingEmployee.get();
+                if (picture != null) {
+                    if (employee.getProfilePictureUrl() == null) {
+                        employee.setProfilePictureUrl(picture);
+                    } else {
+                        removeProfileImage(employee.getProfilePictureUrl());
+                        employee.setProfilePictureUrl(picture);
+                    }
+                    employeeRepository.save(employee);
+                }
+                String token = jwtUtil.generateToken(employee);
+                Map<String, Object> response = new HashMap<>();
+                response.put("token", token);
+                response.put("role", employee.getRole());
+                return ResponseEntity
+                        .ok(new ApiResponse<>("Login successful", response, true, HttpStatus.OK, "access_token"));
             } else {
-                newEmployee.setRole(UserRole.ADMIN);
-            }
-            newEmployee.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
-            newEmployee.setStatus(Employee.UserStatus.ACTIVE);
 
-            Employee savedEmployee = employeeRepository.save(newEmployee);
-            String token = jwtUtil.generateToken(savedEmployee);
-            Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
-            response.put("role", savedEmployee.getRole());
-            return ResponseEntity
-                    .ok(new ApiResponse<>("Account created and logged in", response, true, HttpStatus.OK,
-                            "access_token"));
+                Employee newEmployee = new Employee();
+                newEmployee.setEmail(email);
+                newEmployee.setName(name);
+                newEmployee.setProfilePictureUrl(picture);
+                newEmployee.setRole(UserRole.EMPLOYEE);
+                newEmployee.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                newEmployee.setStatus(Employee.UserStatus.ACTIVE);
+                if (picture != null) {
+                    newEmployee.setProfilePictureUrl(picture);
+                }
+
+                Employee savedEmployee = employeeRepository.save(newEmployee);
+                String token = jwtUtil.generateToken(savedEmployee);
+                Map<String, Object> response = new HashMap<>();
+                response.put("token", token);
+                response.put("role", savedEmployee.getRole());
+                return ResponseEntity
+                        .ok(new ApiResponse<>("Account created and logged in", response, true, HttpStatus.OK,
+                                "access_token"));
+            }
+        } catch (Exception e) {
+            throw new AppException("Error logging in: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public void removeProfileImage(String url) {
+        try {
+            String filename = url.substring(url.lastIndexOf("/") + 1);
+            String filePath = "src/main/resources" + filename;
+            File file = new File(filePath);
+            if (file.exists()) {
+                file.delete();
+            }
+        } catch (Exception e) {
+            System.out.println("Error removing profile picture: " + e.getMessage());
         }
     }
 }

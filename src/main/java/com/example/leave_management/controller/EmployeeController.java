@@ -7,7 +7,6 @@ import com.example.leave_management.dto.response.ApiResponse;
 import com.example.leave_management.model.Employee;
 import com.example.leave_management.model.LeavePolicy;
 import com.example.leave_management.model.Employee.UserRole;
-import com.example.leave_management.model.Employee.UserStatus;
 import com.example.leave_management.security.RequiresLogin;
 import com.example.leave_management.security.RequiresRole;
 import com.example.leave_management.service.AuthService;
@@ -15,18 +14,18 @@ import com.example.leave_management.service.EmployeeService;
 import com.example.leave_management.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.access.prepost.PreAuthorize;
+
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -48,6 +47,8 @@ public class EmployeeController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    private final Path profilePicturesPath = Paths.get("src/main/resources/uploads/profile");
 
     @PostMapping("/login")
     @Operation(summary = "Authenticate employee", description = "Authenticate an employee with email and password")
@@ -73,24 +74,6 @@ public class EmployeeController {
         ApiResponse<Employee> response = employeeService.updateUser(userId, userDto);
         return ResponseEntity.status(response.getStatus()).body(response);
     }
-
-    // @GetMapping("/employees/{userId}")
-    // @Operation(summary = "Get user by ID", description = "Retrieves a E by their
-    // ID")
-    // public ResponseEntity<ApiResponse<Employee>> getUserById(
-    // @Parameter(description = "User ID") @PathVariable UUID userId) {
-    // ApiResponse<Employee> response = employeeService.getUserById(userId);
-    // return ResponseEntity.status(response.getStatus()).body(response);
-    // }
-
-    // @GetMapping("/employees/email/{email}")
-    // @Operation(summary = "Get user by email", description = "Retrieves a user by
-    // their email")
-    // public ResponseEntity<ApiResponse<Employee>> getUserByEmail(
-    // @Parameter(description = "User email") @PathVariable String email) {
-    // ApiResponse<Employee> response = employeeService.getUserByEmail(email);
-    // return ResponseEntity.status(response.getStatus()).body(response);
-    // }
 
     @GetMapping("/employees")
     @RequiresLogin
@@ -136,27 +119,6 @@ public class EmployeeController {
                 .ok(employeeService.employeeLeavePolicy(UUID.fromString(userId)));
     }
 
-    // @DeleteMapping("/employees/{userId}")
-    // @Operation(summary = "Delete user", description = "Deletes a user by their
-    // ID")
-    // public ResponseEntity<ApiResponse<Void>> deleteUser(
-    // @Parameter(description = "User ID") @PathVariable UUID userId) {
-    // ApiResponse<Void> response = employeeService.deleteUser(userId);
-    // return ResponseEntity.status(response.getStatus()).body(response);
-    // }
-
-    // @PutMapping("/employees/{userId}/status")
-    // @Operation(summary = "Change user status", description = "Updates a user's
-    // status")
-    // public ResponseEntity<ApiResponse<Employee>> changeUserStatus(
-    // @Parameter(description = "User ID") @PathVariable UUID userId,
-    // @Parameter(description = "New status") @RequestParam Employee.UserStatus
-    // newStatus) {
-    // ApiResponse<Employee> response = employeeService.changeUserStatus(userId,
-    // newStatus);
-    // return ResponseEntity.status(response.getStatus()).body(response);
-    // }
-
     @RequiresLogin
     @RequiresRole({ UserRole.ADMIN, UserRole.MANAGER })
     @SecurityRequirement(name = "bearerAuth")
@@ -193,27 +155,6 @@ public class EmployeeController {
         return ResponseEntity.status(response.getStatus()).body(response);
     }
 
-    // @PutMapping("/employees/{userId}/password")
-    // @Operation(summary = "Update password", description = "Updates a user's
-    // password")
-    // public ResponseEntity<ApiResponse<Employee>> updatePassword(
-    // @Parameter(description = "User ID") @PathVariable UUID userId,
-    // @Parameter(description = "Old password") @RequestParam String oldPassword,
-    // @Parameter(description = "New password") @RequestParam String newPassword) {
-    // ApiResponse<Employee> response = employeeService.updatePassword(userId,
-    // oldPassword, newPassword);
-    // return ResponseEntity.status(response.getStatus()).body(response);
-    // }
-
-    // @PostMapping("/employees/{userId}/reset-password")
-    // @Operation(summary = "Reset password", description = "Resets a user's
-    // password to a temporary one")
-    // public ResponseEntity<ApiResponse<Employee>> resetPassword(
-    // @Parameter(description = "User ID") @PathVariable UUID userId) {
-    // ApiResponse<Employee> response = employeeService.resetPassword(userId);
-    // return ResponseEntity.status(response.getStatus()).body(response);
-    // }
-
     @PatchMapping("/employees/profile")
     @RequiresLogin
     @SecurityRequirement(name = "bearerAuth")
@@ -225,5 +166,24 @@ public class EmployeeController {
         ApiResponse<Employee> response = employeeService.updateProfile(UUID.fromString(userId),
                 userDto);
         return ResponseEntity.status(response.getStatus()).body(response);
+    }
+
+    @GetMapping("/uploads/profile/{filename:.+}")
+    public ResponseEntity<Resource> getProfilePicture(@PathVariable String filename) {
+        try {
+            Path filePath = Paths.get("src/main/resources/uploads/profile").resolve(filename);
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists() && resource.isReadable()) {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.IMAGE_JPEG)
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IOException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

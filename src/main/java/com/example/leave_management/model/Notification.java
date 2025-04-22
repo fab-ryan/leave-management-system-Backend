@@ -46,7 +46,11 @@ public class Notification {
         LEAVE_APPROVED,
         LEAVE_REJECTED,
         LEAVE_PENDING,
-        SYSTEM
+        SYSTEM,
+        LEAVE_COMPENSATED,
+        LEAVE_APPROVED_COMPENSATED,
+        LEAVE_REJECTED_COMPENSATED,
+        LEAVE_PENDING_COMPENSATED,
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {

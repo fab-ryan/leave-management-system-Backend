@@ -66,28 +66,6 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    @Override
-    public void sendPasswordResetEmail(String to, String employeeName, String resetToken) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setTo(to);
-            helper.setSubject("Password Reset Request");
-
-            Context context = new Context();
-            context.setVariable("employeeName", employeeName);
-            context.setVariable("resetToken", resetToken);
-
-            String htmlContent = templateEngine.process("password-reset-email", context);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Failed to send password reset email", e);
-        }
-    }
-
     private String getLeaveStatusSubject(NotificationType type) {
         return switch (type) {
             case LEAVE_APPROVED -> "Your Leave Application Has Been Approved";

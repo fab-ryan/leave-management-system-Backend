@@ -107,8 +107,7 @@ public class NotificationServiceImpl implements NotificationService {
                 title = "Leave Application Compensated";
                 message = "Your leave application has been compensated. Details: " + leaveDetails;
                 break;
-            case
-                    LEAVE_APPROVED_COMPENSATED:
+            case LEAVE_APPROVED_COMPENSATED:
                 title = "Leave Application Approved Compensated";
                 message = "Your leave application has been approved and compensated. Details: " + leaveDetails;
                 break;

@@ -26,7 +26,7 @@ import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import java.util.HashMap;
 import java.util.Map;
 
-@Configuration
+// @Configuration
 public class OAuth2Config {
     @Value("${spring.security.oauth2.client.registration.microsoft.client-id}")
     private String clientId;

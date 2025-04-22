@@ -36,7 +36,6 @@ public class LeavePolicyServiceImpl implements LeavePolicyService {
             policy.setRequiresApproval(true);
             policy.setRequiresDocumentation(true);
             policy.setMinDaysBeforeRequest(14);
-            policy.setAnnualAllowance(20);
             policy.setMaternityAllowance(10);
             policy.setPaternityAllowance(10);
             policy.setUnpaidAllowance(10);
@@ -82,10 +81,10 @@ public class LeavePolicyServiceImpl implements LeavePolicyService {
     @Override
     public ApiResponse<LeavePolicy> updateIsActiveStatus(UUID policyId, Boolean status) {
         LeavePolicy policy = leavePolicyRepository.findById(policyId)
-                .orElseThrow();
+                .orElseThrow(() -> new AppException("Policy not found", HttpStatus.NOT_FOUND));
         policy.setIsActive(status);
-        return new ApiResponse<>("Policies retrieved successfully", policy, true, HttpStatus.OK, "policy");
-
+        LeavePolicy updatedPolicy = leavePolicyRepository.save(policy);
+        return new ApiResponse<>("Policy status updated successfully", updatedPolicy, true, HttpStatus.OK, "policy");
     }
 
     @Override

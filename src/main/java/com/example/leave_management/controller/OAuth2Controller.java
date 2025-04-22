@@ -1,6 +1,5 @@
 package com.example.leave_management.controller;
 
-import com.example.leave_management.model.Employee.UserRole;
 import com.example.leave_management.service.EmployeeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,12 +15,11 @@ public class OAuth2Controller {
     @Autowired
     private EmployeeService employeeService;
 
-    @GetMapping("/oauth2/callback")
+    @GetMapping("/microsoft/callback")
     public ResponseEntity<?> handleOAuth2Callback(
             @RequestParam String email,
             @RequestParam String name,
-            @RequestParam String picture,
-            @RequestParam UserRole role) {
-        return employeeService.handleOAuth2Login(email, name, picture, role);
+            @RequestParam String picture) {
+        return employeeService.handleOAuth2Login(email, name, picture);
     }
 }

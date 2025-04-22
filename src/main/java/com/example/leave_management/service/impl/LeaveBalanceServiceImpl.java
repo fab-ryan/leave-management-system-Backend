@@ -1,13 +1,16 @@
 package com.example.leave_management.service.impl;
 
+import com.example.leave_management.dto.CompassiionRequestDto;
 import com.example.leave_management.dto.LeaveBalanceByDaysDto;
 import com.example.leave_management.dto.response.ApiResponse;
 import com.example.leave_management.enums.LeaveType;
 import com.example.leave_management.exception.AppException;
 import com.example.leave_management.model.*;
+import com.example.leave_management.model.Notification.NotificationType;
 import com.example.leave_management.repository.*;
 import com.example.leave_management.service.LeaveBalanceService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -18,6 +21,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -34,6 +38,15 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
 
     @Autowired
     private LeavePolicyRepository leavePolicyRepository;
+
+    @Autowired
+    private CompassionRequestRepository compassionRequestRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Value("${leave.management.year:2024}")
+    private int initialYear;
 
     @Override
     public ApiResponse<LeaveBalance> getLeaveBalance(UUID employeeId) {
@@ -55,17 +68,13 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
     public ApiResponse<LeaveBalance> updateLeaveBalance(UUID employeeId, LeaveType leaveType, Integer days) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new AppException("Employee not found", HttpStatus.NOT_FOUND));
-        System.out.println("employee:>>>>>> " + employee);
         LeavePolicy policy = employee.getLeavePolicy();
-        System.out.println("policy:>>>>>> " + policy);
         LeaveBalance leaveBalance = leaveBalanceRepository.findByEmployee(employee)
                 .orElseGet(() -> initializeLeaveBalance(employeeId).getData());
-        System.out.println("leaveBalance:>>>>>> " + leaveBalance);
         if (!isLeaveRequestValid(leaveType, leaveBalance, policy)) {
             throw new AppException("Requested leave days exceed available balance or policy limits",
                     HttpStatus.BAD_REQUEST);
         }
-        System.out.println("leaveBalance:>>>>>> " + leaveBalance);
         leaveBalance = updateSpecificBalance(leaveBalance, leaveType, days);
 
         LeaveBalance updatedBalance = leaveBalanceRepository.save(leaveBalance);
@@ -99,7 +108,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
 
         // Calculate carry forward from previous year
         int carryForwardAmount = 0;
-        if (currentYear > 2024) { // Only carry forward from 2024 onwards
+        if (currentYear > initialYear) { // Only carry forward from 2024 onwards
             Optional<LeaveBalance> previousYearBalance = leaveBalanceRepository
                     .findByEmployeeAndYear(employee, currentYear - 1);
             if (previousYearBalance.isPresent()) {
@@ -115,7 +124,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         leaveBalance.setPaternityBalance(policy.getPaternityAllowance());
         leaveBalance.setUnpaidBalance(policy.getUnpaidAllowance());
         leaveBalance.setOtherBalance(policy.getOtherAllowance());
-        leaveBalance.setCarryForwardBalance(carryForwardAmount);
+        leaveBalance.setCarryForwardBalance(carryForwardAmount == 0 ? 0 : carryForwardAmount);
 
         LeaveBalance savedBalance = leaveBalanceRepository.save(leaveBalance);
         return new ApiResponse<>("Leave balance initialized successfully", savedBalance, true, HttpStatus.CREATED,
@@ -133,7 +142,10 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
 
         LeavePolicy policy = employee.getLeavePolicy();
         if (policy == null) {
-            throw new AppException("No leave policy found for employee", HttpStatus.BAD_REQUEST);
+            policy = leavePolicyRepository.findFirstByOrderByCreatedAtAsc();
+            employee.setLeavePolicy(policy);
+            employeeRepository.save(employee);
+            policy = employee.getLeavePolicy();
         }
 
         // Calculate monthly accrual (1.66 days per month)
@@ -141,7 +153,6 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         int currentAnnualBalance = leaveBalance.getAnnualBalance();
         int newAnnualBalance = currentAnnualBalance + (int) monthlyAccrual;
 
-        // Ensure we don't exceed the policy limit
         int maxAnnualBalance = policy.getAnnualAllowance() + policy.getCarryForwardLimit();
         if (newAnnualBalance > maxAnnualBalance) {
             newAnnualBalance = maxAnnualBalance;
@@ -177,13 +188,15 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         LocalDate yearEnd = LocalDate.of(prevBalance.getYear(), 12, 31);
         List<Holiday> holidays = holidayRepository.findByDateBetween(yearStart, yearEnd);
 
-        // Adjust carry forward based on holidays
+        holidays.stream().filter(
+                holiday -> holiday.isRecurring())
+                .collect(Collectors.toList());
+
         int holidayCount = holidays.size();
         int adjustedCarryForwardLimit = Math.max(0, carryForwardLimit - holidayCount);
 
-        // Calculate carry forward amount (max of 5 days)
         int carryForwardAmount = Math.min(unusedAnnualLeave, adjustedCarryForwardLimit);
-        return Math.min(carryForwardAmount, 5); // Ensure max of 5 days
+        return Math.min(carryForwardAmount, 5);
     }
 
     public int calculateWorkingDays(LocalDate startDate, LocalDate endDate) {
@@ -368,7 +381,8 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
     }
 
     @Override
-    public ApiResponse<LeaveBalance> approveCompassionDays(UUID employeeId, Integer days) {
+    public ApiResponse<CompassionRequest> approveCompassionDays(UUID employeeId, UUID id,
+            CompassionRequestStatus status) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new AppException("Employee not found", HttpStatus.NOT_FOUND));
 
@@ -376,18 +390,166 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         LeaveBalance leaveBalance = leaveBalanceRepository.findByEmployeeAndYear(employee, currentYear)
                 .orElseGet(() -> initializeLeaveBalance(employeeId).getData());
 
-        // Update the personal balance (assuming compassion days are deducted from
-        // personal leave)
-        int currentPersonalBalance = leaveBalance.getPersonalBalance();
-        if (currentPersonalBalance < days) {
-            throw new AppException("Insufficient personal leave balance for compassion days", HttpStatus.BAD_REQUEST);
+        CompassionRequest compassionRequest = compassionRequestRepository.findById(id)
+                .orElseThrow(() -> new AppException("Compassion request not found", HttpStatus.NOT_FOUND));
+
+        if (!compassionRequest.getEmployee().getId().equals(employeeId)) {
+            throw new AppException("Unauthorized access", HttpStatus.FORBIDDEN);
+        }
+        if (compassionRequest.getStatus() == status) {
+            throw new AppException("Compassion request already " + status, HttpStatus.BAD_REQUEST);
+        }
+        if (status == CompassionRequestStatus.APPROVED) {
+            leaveBalance.setPersonalBalance(leaveBalance.getPersonalBalance() + 1);
+            leaveBalanceRepository.save(leaveBalance);
+        }
+        compassionRequest.setStatus(status);
+        compassionRequest.setApprovedBy(employee);
+        compassionRequest.setApprovedAt(LocalDate.now());
+        compassionRequestRepository.save(compassionRequest);
+
+        return new ApiResponse<>("Compassion days " + status + " successfully",
+                compassionRequest, true, HttpStatus.OK,
+                "leave_balance");
+    }
+
+    @Override
+    public ApiResponse<CompassionRequest> applyCompassionDays(UUID employeeId,
+            CompassiionRequestDto compassionRequestDto) {
+        try {
+            Employee employee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new AppException("Employee not found", HttpStatus.NOT_FOUND));
+            LeaveBalance leaveBalance = leaveBalanceRepository
+                    .findByEmployeeAndYear(employee, LocalDate.now().getYear())
+                    .orElseGet(() -> initializeLeaveBalance(employeeId).getData());
+            if (leaveBalance.getCarryForwardBalance() >= 5) {
+                throw new AppException("Compassion request limit reached", HttpStatus.BAD_REQUEST);
+            }
+
+            CompassionRequest compassionRequest = new CompassionRequest();
+            compassionRequest.setEmployee(employee);
+            compassionRequest.setWorkDate(compassionRequestDto.getWorkDate());
+            compassionRequest.setReason(compassionRequestDto.getReason());
+            compassionRequest.setHoliday(compassionRequestDto.isHoliday());
+            compassionRequest.setWeekend(compassionRequestDto.isWeekend());
+            compassionRequest.setStatus(CompassionRequestStatus.PENDING);
+
+            CompassionRequest savedCompassionRequest = compassionRequestRepository.save(compassionRequest);
+            Notification notification = new Notification();
+            notification.setEmployee(employee);
+            notification.setMessage("Compassion days applied successfully");
+            notification.setType(NotificationType.LEAVE_PENDING_COMPENSATED);
+            notification.setTitle("Compassion Days Applied");
+            notificationRepository.save(notification);
+
+            return new ApiResponse<CompassionRequest>("Compassion days applied successfully", savedCompassionRequest,
+                    true,
+                    HttpStatus.OK,
+                    "leave_balance");
+
+        } catch (Exception e) {
+            throw new AppException("Failed to apply compassion days", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Override
+    public ApiResponse<List<CompassionRequest>> getCompassionRequests(UUID employeeId,
+            CompassionRequestStatus status) {
+
+        List<CompassionRequest> compassionRequests = compassionRequestRepository.findByEmployeeId(employeeId);
+
+        if (status != null) {
+            compassionRequests = compassionRequests.stream()
+                    .filter(request -> request.getStatus() == status)
+                    .collect(Collectors.toList());
+        } else {
+            compassionRequests = compassionRequests.stream()
+                    .filter(request -> request.getStatus() == CompassionRequestStatus.PENDING)
+                    .collect(Collectors.toList());
         }
 
-        leaveBalance.setPersonalBalance(currentPersonalBalance - days);
-        LeaveBalance updatedBalance = leaveBalanceRepository.save(leaveBalance);
+        return new ApiResponse<>("Compassion requests retrieved successfully", compassionRequests,
+                true,
+                HttpStatus.OK,
+                "compassion_requests");
+    }
 
-        return new ApiResponse<>("Compassion days approved successfully", updatedBalance, true, HttpStatus.OK,
+    @Override
+    public ApiResponse<List<CompassionRequest>> getCompassionRequestByAdmin() {
+        List<CompassionRequest> compassionRequests = compassionRequestRepository.findAll();
+        return new ApiResponse<>("Compassion requests retrieved successfully", compassionRequests, true,
+                HttpStatus.OK,
+                "compassion_requests");
+    }
+
+    @Override
+    public ApiResponse<CompassionRequest> updateCompassionRequest(UUID id, UUID employeeId,
+            CompassionRequestStatus status, String rejectionReason) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new AppException("Employee not found", HttpStatus.NOT_FOUND));
+        CompassionRequest compassionRequest = compassionRequestRepository.findById(id)
+                .orElseThrow(() -> new AppException("Compassion request not found", HttpStatus.NOT_FOUND));
+
+        if (status == CompassionRequestStatus.APPROVED) {
+            LeaveBalance leaveBalance = leaveBalanceRepository
+                    .findByEmployeeAndYear(compassionRequest.getEmployee(), LocalDate.now().getYear())
+                    .orElseGet(() -> initializeLeaveBalance(compassionRequest.getEmployee().getId()).getData());
+            leaveBalance.setCarryForwardBalance(leaveBalance.getCarryForwardBalance() + 1);
+            leaveBalanceRepository.save(leaveBalance);
+            compassionRequest.setApprovedBy(employee);
+            compassionRequest.setApprovedAt(LocalDate.now());
+        }
+        if (status == CompassionRequestStatus.REJECTED) {
+            compassionRequest.setRejectionReason(rejectionReason);
+        }
+        compassionRequest.setStatus(status);
+        CompassionRequest updatedCompassionRequest = compassionRequestRepository.save(compassionRequest);
+        Notification notification = new Notification();
+        notification.setEmployee(compassionRequest.getEmployee());
+        notification.setTitle("Compassion Request Updated");
+        notification.setMessage("Compassion request updated successfully");
+        notification.setType(NotificationType.LEAVE_PENDING_COMPENSATED);
+        notificationRepository.save(notification);
+
+        return new ApiResponse<>("Compassion request updated successfully", updatedCompassionRequest, true,
+                HttpStatus.OK,
                 "leave_balance");
+
+    }
+
+    @Override
+    public ApiResponse<Void> deleteCompassionRequest(UUID id) {
+        compassionRequestRepository.deleteById(id);
+        return new ApiResponse<>("Compassion request deleted successfully", null, true, HttpStatus.OK,
+                "leave_balance");
+
+    }
+
+    @Override
+    public ApiResponse<LeaveBalance> modifyLeaveBalance(UUID employeeId, LeaveBalance leaveBalance) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new AppException("Employee not found", HttpStatus.NOT_FOUND));
+        LeaveBalance existingLeaveBalance = leaveBalanceRepository.findByEmployeeAndYear(employee,
+                leaveBalance.getYear())
+                .orElseThrow(() -> new AppException("Leave balance not found", HttpStatus.NOT_FOUND));
+        if (existingLeaveBalance == null) {
+            existingLeaveBalance = initializeLeaveBalance(employeeId).getData();
+        }
+        existingLeaveBalance.setAnnualBalance(leaveBalance.getAnnualBalance());
+        existingLeaveBalance.setPersonalBalance(leaveBalance.getPersonalBalance());
+        existingLeaveBalance.setSickBalance(leaveBalance.getSickBalance());
+        existingLeaveBalance.setMaternityBalance(leaveBalance.getMaternityBalance());
+        existingLeaveBalance.setPaternityBalance(leaveBalance.getPaternityBalance());
+        existingLeaveBalance.setUnpaidBalance(leaveBalance.getUnpaidBalance());
+        existingLeaveBalance.setOtherBalance(leaveBalance.getOtherBalance());
+        existingLeaveBalance.setCarryForwardBalance(leaveBalance.getCarryForwardBalance());
+
+        LeaveBalance updatedLeaveBalance = leaveBalanceRepository.save(existingLeaveBalance);
+
+        return new ApiResponse<>("Leave balance updated successfully",
+                updatedLeaveBalance, true, HttpStatus.OK,
+                "leave_balance");
+
     }
 }
 

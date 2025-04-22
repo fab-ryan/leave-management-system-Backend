@@ -14,6 +14,9 @@ import com.example.leave_management.dto.response.ApiResponse;
 import com.example.leave_management.model.Employee.UserRole;
 import com.example.leave_management.util.JwtUtil;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -81,12 +84,11 @@ public class MicrosoftAuthService {
             // Get profile picture
             String picture = getProfilePicture(accessToken);
 
-            UserRole role = UserRole.EMPLOYEE;
-
-            ResponseEntity<?> response = employeeService.handleOAuth2Login(email, name, picture, role);
+            ResponseEntity<?> response = employeeService.handleOAuth2Login(email, name, picture);
 
             // Extract token from response
             String token = null;
+            UserRole role = UserRole.EMPLOYEE;
             if (response.getBody() instanceof ApiResponse) {
                 ApiResponse<?> apiResponse = (ApiResponse<?>) response.getBody();
                 Map<String, Object> responseData = (Map<String, Object>) apiResponse.getData();
@@ -109,6 +111,7 @@ public class MicrosoftAuthService {
         } catch (Exception e) {
             // If there's an error, redirect to frontend error page
             String errorMessage = "Authentication failed";
+            System.out.println("Error: " + e.getMessage());
             String errorUrl = UriComponentsBuilder.fromHttpUrl(frontendUrl)
                     .path("/login")
                     .queryParam("error", errorMessage)
@@ -158,7 +161,7 @@ public class MicrosoftAuthService {
         return response.getBody();
     }
 
-    private String getProfilePicture(String accessToken) {
+    public String getProfilePicture(String accessToken) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(accessToken);
@@ -175,12 +178,51 @@ public class MicrosoftAuthService {
             if (metadataResponse.getStatusCode() == HttpStatus.OK) {
                 Map<String, Object> metadata = metadataResponse.getBody();
                 if (metadata != null && metadata.containsKey("@odata.mediaContentType")) {
-                    return "https://graph.microsoft.com/v1.0/me/photo/$value";
+                    // Download the actual photo
+                    ResponseEntity<byte[]> photoResponse = restTemplate.exchange(
+                            "https://graph.microsoft.com/v1.0/me/photo/$value",
+                            HttpMethod.GET,
+                            entity,
+                            byte[].class);
+
+                    if (photoResponse.getStatusCode() == HttpStatus.OK) {
+                        // Create uploads/profile directory if it doesn't exist
+                        String uploadDir = "src/main/resources/uploads/profile";
+                        File directory = new File(uploadDir);
+                        if (!directory.exists()) {
+                            directory.mkdirs();
+                        }
+
+                        // Generate unique filename using timestamp
+                        String filename = "profile_" + System.currentTimeMillis() + ".jpg";
+                        String filePath = uploadDir + "/" + filename;
+
+                        // Save the photo
+                        try (FileOutputStream fos = new FileOutputStream(filePath)) {
+                            fos.write(photoResponse.getBody());
+                        }
+
+                        // Return the relative path that can be used in the frontend
+                        return "/uploads/profile/" + filename;
+                    }
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error fetching profile picture URL: " + e.getMessage());
+            System.out.println("Error fetching profile picture: " + e.getMessage());
         }
         return null;
+    }
+
+    public void removeProfileImage(String url) {
+        try {
+            String filename = url.substring(url.lastIndexOf("/") + 1);
+            String filePath = "src/main/resources" + filename;
+            File file = new File(filePath);
+            if (file.exists()) {
+                file.delete();
+            }
+        } catch (Exception e) {
+            System.out.println("Error removing profile picture: " + e.getMessage());
+        }
     }
 }

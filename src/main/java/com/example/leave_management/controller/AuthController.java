@@ -76,7 +76,8 @@ public class AuthController {
     }
 
     @GetMapping("/microsoft/callback")
-    public ResponseEntity<?> callback(@RequestParam("code") String code) {
+    public ResponseEntity<?> callback(@RequestParam(value = "code", required = false) String code) {
+
         return microsoftAuthService.handleMicrosoftCallback(code);
     }
 

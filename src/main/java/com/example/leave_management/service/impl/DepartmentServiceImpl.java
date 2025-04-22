@@ -2,9 +2,11 @@ package com.example.leave_management.service.impl;
 
 import com.example.leave_management.dto.DepartmentDto;
 import com.example.leave_management.dto.response.ApiResponse;
+import com.example.leave_management.exception.AppException;
 import com.example.leave_management.model.Department;
 import com.example.leave_management.repository.DepartmentRepository;
 import com.example.leave_management.service.DepartmentService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,8 +19,9 @@ import java.util.stream.Collectors;
 @Transactional
 public class DepartmentServiceImpl implements DepartmentService {
 
-    private DepartmentRepository departmentRepository;
+    private final DepartmentRepository departmentRepository;
 
+    @Autowired
     public DepartmentServiceImpl(DepartmentRepository departmentRepository) {
         this.departmentRepository = departmentRepository;
     }
@@ -52,7 +55,6 @@ public class DepartmentServiceImpl implements DepartmentService {
 
                     department.setName(departmentDto.getName().toLowerCase());
                     department.setDescription(departmentDto.getDescription());
-                    department.setDescription(departmentDto.getDescription());
 
                     Department updatedDepartment = departmentRepository.save(department);
                     return new ApiResponse<DepartmentDto>("Department updated successfully",
@@ -73,11 +75,13 @@ public class DepartmentServiceImpl implements DepartmentService {
 
     @Override
     public ApiResponse<DepartmentDto> updateStatus(UUID id) {
-        Department department = departmentRepository.findById(id).orElse(null);
-        department.setIsPublic(!department.getIsPublic());
+        Department department = departmentRepository.findById(id)
+                .orElseThrow(() -> new AppException("Department not found", HttpStatus.NOT_FOUND));
 
+        department.setIsPublic(!department.getIsPublic());
         Department updatedDepartment = departmentRepository.save(department);
-        return new ApiResponse<DepartmentDto>("Department updated successfully",
+
+        return new ApiResponse<DepartmentDto>("Department status updated successfully",
                 convertToDto(updatedDepartment), true, HttpStatus.OK, "department");
     }
 
@@ -116,7 +120,6 @@ public class DepartmentServiceImpl implements DepartmentService {
         dto.setName(department.getName().toUpperCase());
         dto.setDescription(department.getDescription());
         dto.setIsPublic(department.getIsPublic());
-
         return dto;
     }
 }

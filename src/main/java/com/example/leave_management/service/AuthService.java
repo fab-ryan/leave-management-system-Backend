@@ -27,7 +27,7 @@ public class AuthService {
 
     public ApiResponse<Map<String, Object>> authenticate(LoginRequest loginRequest) {
         Employee employee = employeeRepository.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new AppException("Invalid email or password", HttpStatus.UNAUTHORIZED));
+                .orElseThrow(() -> new AppException("Unauthorized access", HttpStatus.UNAUTHORIZED));
 
         // Compare the provided password with the stored hashed password
         if (!passwordEncoder.matches(loginRequest.getPassword(), employee.getPassword())) {

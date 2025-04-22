@@ -121,4 +121,11 @@ public class CompassionRequest {
         return workDate;
     }
 
+    public boolean isHoliday() {
+        return isHoliday;
+    }
+
+    public boolean isWeekend() {
+        return isWeekend;
+    }
 }

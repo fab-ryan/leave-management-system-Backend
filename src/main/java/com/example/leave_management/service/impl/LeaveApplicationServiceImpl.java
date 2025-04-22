@@ -14,6 +14,7 @@ import com.example.leave_management.model.LeaveApplication.LeaveStatus;
 import com.example.leave_management.repository.EmployeeRepository;
 import com.example.leave_management.repository.LeaveApplicationRepository;
 import com.example.leave_management.service.LeaveApplicationService;
+import com.example.leave_management.service.EmailService;
 import com.example.leave_management.service.FileStorageService;
 import com.example.leave_management.service.NotificationService;
 import com.example.leave_management.model.Notification;
@@ -56,6 +57,9 @@ public class LeaveApplicationServiceImpl implements LeaveApplicationService {
         @Autowired
         private LeaveBalanceService leaveBalanceService;
 
+        @Autowired
+        private EmailService emailService;
+
         @Override
         public ApiResponse<LeaveApplication> createLeaveApplication(LeaveApplicationDto leaveApplicationDto,
                         UUID employeeId) {
@@ -64,7 +68,7 @@ public class LeaveApplicationServiceImpl implements LeaveApplicationService {
                 List<LeaveApplication> existingLeaveApplication = leaveApplicationRepository
                                 .findByEmployeeAndStatusAndLeaveType(employee, LeaveStatus.PENDING,
                                                 leaveApplicationDto.getLeaveType());
-                if (!existingLeaveApplication.isEmpty()) {
+                if (existingLeaveApplication.size() > 0) {
                         throw new AppException("You already have a pending leave application for this leave type",
                                         HttpStatus.BAD_REQUEST);
                 }
@@ -104,6 +108,8 @@ public class LeaveApplicationServiceImpl implements LeaveApplicationService {
                                 employee.getId(),
                                 Notification.NotificationType.LEAVE_PENDING,
                                 leaveDetails);
+                emailService.sendLeaveStatusEmail(employee.getEmail(), employee.getName(),
+                                Notification.NotificationType.LEAVE_PENDING, leaveDetails);
 
                 return new ApiResponse<>("Leave application created successfully", savedApplication, true,
                                 HttpStatus.CREATED,
@@ -204,6 +210,8 @@ public class LeaveApplicationServiceImpl implements LeaveApplicationService {
                                 leaveApplication.getEmployee().getId(),
                                 notificationType,
                                 leaveDetails);
+                emailService.sendLeaveStatusEmail(leaveApplication.getEmployee().getEmail(),
+                                leaveApplication.getEmployee().getName(), notificationType, leaveDetails);
 
                 return new ApiResponse<>("Leave application status updated successfully", updatedApplication, true,
                                 HttpStatus.OK,
@@ -431,6 +439,7 @@ public class LeaveApplicationServiceImpl implements LeaveApplicationService {
                                         .orElseThrow(() -> new AppException("Employee not found",
                                                         HttpStatus.NOT_FOUND));
                         String departmentId = employee.getDepartment().getId().toString();
+                        System.out.println("departmentId: " + departmentId);
                         applications = applications.stream()
                                         .filter(application -> application.getEmployee().getDepartment()
                                                         .getId().toString().equals(departmentId))

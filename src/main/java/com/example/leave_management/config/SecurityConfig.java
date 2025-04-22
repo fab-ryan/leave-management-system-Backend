@@ -5,6 +5,7 @@ import com.example.leave_management.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -18,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.Arrays;
@@ -35,20 +37,17 @@ public class SecurityConfig {
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-                http
-                                .csrf(csrf -> csrf.disable())
-                                .cors(cors -> cors.configurationSource(request -> {
-                                        CorsConfiguration config = new CorsConfiguration();
-                                        config.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // Add your
-                                                                                                          // frontend
-                                                                                                          // URL
-                                        config.setAllowedMethods(
-                                                        Arrays.asList("*"));
-                                        config.setAllowedHeaders(Arrays.asList("*"));
-                                        config.setAllowCredentials(true);
-                                        config.setMaxAge(3600L);
-                                        return config;
-                                }))
+                http.cors(cors -> cors.configurationSource(request -> {
+                        CorsConfiguration config = new CorsConfiguration();
+                        config.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+                        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                        config.setAllowedHeaders(Arrays.asList("*"));
+                        config.setAllowCredentials(true);
+                        return config;
+                }))
+                                .csrf(csrf -> csrf
+                                                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                                .ignoringRequestMatchers("/api/auth/**", "/login", "/register"))
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(
                                                                 "/api/auth/**",
@@ -60,8 +59,11 @@ public class SecurityConfig {
                                                                 "/leave-types",
                                                                 "/leave-applications/documents/*",
                                                                 "/error",
-                                                                "/auth/microsoft/**")
+                                                                "/auth/microsoft/**",
+                                                                "/profile-picture/**",
+                                                                "/uploads/profile/**")
                                                 .permitAll()
+                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                                 .anyRequest().authenticated())
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

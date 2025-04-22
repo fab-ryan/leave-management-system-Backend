@@ -51,7 +51,7 @@ public class FileStorageServiceImpl implements FileStorageService {
 
             String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
             String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String filename = UUID.randomUUID().toString() + originalFilename + extension;
+            String filename = UUID.randomUUID().toString() + extension;
 
             try (InputStream inputStream = file.getInputStream()) {
                 Files.copy(inputStream, rootLocation.resolve(filename),
@@ -113,11 +113,15 @@ public class FileStorageServiceImpl implements FileStorageService {
         } catch (IOException e) {
             throw new AppException("Failed to delete files", HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
     }
 
     @Override
-    public void delete(String name) {
-
+    public void delete(String filename) {
+        try {
+            Path file = load(filename);
+            Files.deleteIfExists(file);
+        } catch (IOException e) {
+            throw new AppException("Failed to delete file: " + filename, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
