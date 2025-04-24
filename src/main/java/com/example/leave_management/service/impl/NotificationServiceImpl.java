@@ -123,6 +123,14 @@ public class NotificationServiceImpl implements NotificationService {
                 title = "Leave Application Pending Compensated";
                 message = "Your leave application is pending approval and compensated. Details: " + leaveDetails;
                 break;
+            case LEAVE_WAITING_APPROVAL:
+                title = "Leave Application Waiting For Approval";
+                message = "You have a leave application waiting for approval. Details: " + leaveDetails;
+                break;
+            case LEAVE_WAITING_APPROVAL_COMPENSATED:
+                title = "Leave Application Waiting For Approval Compensated";
+                message = "You have a leave application waiting for approval and compensated. Details: " + leaveDetails;
+                break;
         }
 
         Notification notification = new Notification();

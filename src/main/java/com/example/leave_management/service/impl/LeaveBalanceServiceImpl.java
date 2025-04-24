@@ -6,9 +6,12 @@ import com.example.leave_management.dto.response.ApiResponse;
 import com.example.leave_management.enums.LeaveType;
 import com.example.leave_management.exception.AppException;
 import com.example.leave_management.model.*;
+import com.example.leave_management.model.Employee.UserRole;
 import com.example.leave_management.model.Notification.NotificationType;
 import com.example.leave_management.repository.*;
 import com.example.leave_management.service.LeaveBalanceService;
+import com.example.leave_management.service.NotificationService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -18,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,6 +48,9 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
 
     @Autowired
     private NotificationRepository notificationRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Value("${leave.management.year:2024}")
     private int initialYear;
@@ -157,7 +164,13 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
         if (newAnnualBalance > maxAnnualBalance) {
             newAnnualBalance = maxAnnualBalance;
         }
-
+        leaveBalance.setCarryForwardBalance(policy.getCarryForwardLimit());
+        leaveBalance.setPersonalBalance(policy.getPersonalAllowance());
+        leaveBalance.setSickBalance(policy.getSickAllowance());
+        leaveBalance.setMaternityBalance(policy.getMaternityAllowance());
+        leaveBalance.setPaternityBalance(policy.getPaternityAllowance());
+        leaveBalance.setUnpaidBalance(policy.getUnpaidAllowance());
+        leaveBalance.setOtherBalance(policy.getOtherAllowance());
         leaveBalance.setAnnualBalance(newAnnualBalance);
         LeaveBalance updatedBalance = leaveBalanceRepository.save(leaveBalance);
 
@@ -166,6 +179,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
     }
 
     @Scheduled(cron = "0 0 0 L * ?")
+    // @Scheduled(cron = "1 * * * * *") // every minute of 1 second
     public void runAutoAccrual() {
         List<Employee> employees = employeeRepository.findAll();
         for (Employee employee : employees) {
@@ -422,7 +436,7 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             LeaveBalance leaveBalance = leaveBalanceRepository
                     .findByEmployeeAndYear(employee, LocalDate.now().getYear())
                     .orElseGet(() -> initializeLeaveBalance(employeeId).getData());
-            if (leaveBalance.getCarryForwardBalance() >= 5) {
+            if (leaveBalance.getCarryForwardBalance() == 0) {
                 throw new AppException("Compassion request limit reached", HttpStatus.BAD_REQUEST);
             }
 
@@ -435,6 +449,17 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
             compassionRequest.setStatus(CompassionRequestStatus.PENDING);
 
             CompassionRequest savedCompassionRequest = compassionRequestRepository.save(compassionRequest);
+            List<Employee> adminEmployees = employeeRepository
+                    .findByRoleIn(Arrays.asList(UserRole.ADMIN, UserRole.MANAGER));
+            String leaveDetails = String.format("Type: %s, From: %s",
+                    "Compassion",
+                    savedCompassionRequest.getWorkDate());
+            for (Employee adminEmployee : adminEmployees) {
+                notificationService.sendLeaveStatusNotification(
+                        adminEmployee.getId(),
+                        Notification.NotificationType.LEAVE_WAITING_APPROVAL_COMPENSATED,
+                        leaveDetails);
+            }
             Notification notification = new Notification();
             notification.setEmployee(employee);
             notification.setMessage("Compassion days applied successfully");
@@ -448,7 +473,8 @@ public class LeaveBalanceServiceImpl implements LeaveBalanceService {
                     "leave_balance");
 
         } catch (Exception e) {
-            throw new AppException("Failed to apply compassion days", HttpStatus.INTERNAL_SERVER_ERROR);
+            System.out.println("Error applying compassion days: " + e.getMessage());
+            throw new AppException(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

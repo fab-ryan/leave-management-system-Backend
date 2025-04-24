@@ -19,6 +19,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class MicrosoftAuthService {
@@ -187,14 +188,15 @@ public class MicrosoftAuthService {
 
                     if (photoResponse.getStatusCode() == HttpStatus.OK) {
                         // Create uploads/profile directory if it doesn't exist
-                        String uploadDir = "src/main/resources/uploads/profile";
+                        String uploadDir = "uploads/profile";
                         File directory = new File(uploadDir);
                         if (!directory.exists()) {
                             directory.mkdirs();
                         }
 
-                        // Generate unique filename using timestamp
-                        String filename = "profile_" + System.currentTimeMillis() + ".jpg";
+                        // Generate unique filename using timestamp and UUID for better uniqueness
+                        String filename = "profile_" + UUID.randomUUID().toString() + "_" + System.currentTimeMillis()
+                                + ".jpg";
                         String filePath = uploadDir + "/" + filename;
 
                         // Save the photo
@@ -203,7 +205,7 @@ public class MicrosoftAuthService {
                         }
 
                         // Return the relative path that can be used in the frontend
-                        return "/uploads/profile/" + filename;
+                        return "profile/" + filename;
                     }
                 }
             }

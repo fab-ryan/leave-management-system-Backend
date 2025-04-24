@@ -85,15 +85,20 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     @Override
     public Resource loadAsResource(String filename) {
+        System.out.println("file not found: " + filename);
+
         try {
             Path file = load(filename);
+            System.out.println("file: " + file);
             Resource resource = new UrlResource(file.toUri());
             if (resource.exists() || resource.isReadable()) {
                 return resource;
             } else {
+                System.out.println("file not found: " + filename);
                 throw new AppException("Could not read file: " + filename, HttpStatus.NOT_FOUND);
             }
         } catch (MalformedURLException e) {
+            System.out.println("file not found: " + filename);
             throw new AppException("Could not read file: " + filename, HttpStatus.NOT_FOUND);
         }
     }

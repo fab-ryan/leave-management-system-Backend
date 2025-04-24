@@ -1,0 +1,58 @@
+{
+    "properties": [{
+            "name": "leave.management.year",
+            "type": "java.lang.String",
+            "description": "A description for 'leave.management.year'"
+        },
+        {
+            "name": "allowed.email.domain",
+            "type": "java.lang.String",
+            "description": "A description for 'allowed.email.domain'"
+        },
+        {
+            "name": "spring.profiles.active",
+            "type": "java.lang.String",
+            "description": "A description for 'spring.profiles.active'"
+        }, {
+            "name": "frontend.url",
+            "type": "java.lang.String",
+            "description": "A descrip tion for 'frontend.url'"
+        }, {
+            "name": "file.upload-dir",
+            "type": "java.lang.String",
+            "description": "A description for 'file.upload-dir'"
+        }, {
+            "name": "spring.mail.host",
+            "type": "java.lang.String",
+            "description": "A description for 'spring.mail.host'"
+        }, {
+            "name": "microsoft.redirect-uri",
+            "type": "java.lang.String",
+            "description": "A description for 'microsoft.redirect-uri'"
+        }, {
+            "name": "microsoft.client-id",
+            "type": "java.lang.String",
+            "description": "A description for 'microsoft.client-id'"
+        }, {
+            "name": "microsoft.client-secret",
+            "type": "java.lang.String",
+            "description": "A description for 'microsoft.client-secret'"
+        }, {
+            "name": "security.jwt.secret",
+            "type": "java.lang.String",
+            "description": "A description for 'security.jwt.secret'"
+        }, {
+            "name": "security.jwt.expiration",
+            "type": "java.lang.String",
+            "description": "A description for 'security.jwt.expiration'"
+        }, {
+            "name": "spring.application.version",
+            "type": "java.lang.String",
+            "description": "A description for 'spring.application.version'"
+        }, {
+            "name": "server.port",
+            "type": "java.lang.String",
+            "description": "A description for 'server.port'"
+        }
+    ]
+}

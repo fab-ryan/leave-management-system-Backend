@@ -120,11 +120,12 @@ public class LeaveBalanceController {
 
     @PostMapping("compassion/apply")
     @RequiresLogin
-    @SecurityRequirement(name = "bearerAuth")
+    @RequiresRole({ UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE })
     @Operation(summary = "Apply compassion request", description = "Apply compassion request for an employee")
     public ResponseEntity<ApiResponse<CompassionRequest>> applyCompassionRequest(
             HttpServletRequest request,
             @RequestBody CompassiionRequestDto compassionRequestDto) {
+        System.out.println("applyCompassionRequest");
         String userId = jwtUtil.getLoggedUserId(request);
         return ResponseEntity.ok(leaveBalanceService.applyCompassionDays(UUID.fromString(userId),
                 compassionRequestDto));

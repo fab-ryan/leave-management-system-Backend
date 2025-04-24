@@ -32,7 +32,6 @@ public class DepartmentController {
     }
 
     @SecurityRequirement(name = "bearerAuth")
-    @RequiresLogin
     @RequiresRole({ UserRole.ADMIN, UserRole.MANAGER })
     @PostMapping
     @Operation(summary = "Create a new department", description = "Creates a new department with the provided details")

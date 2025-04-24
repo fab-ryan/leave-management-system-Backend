@@ -18,6 +18,7 @@ import com.example.leave_management.service.EmailService;
 import com.example.leave_management.service.FileStorageService;
 import com.example.leave_management.service.NotificationService;
 import com.example.leave_management.model.Notification;
+import com.example.leave_management.model.Employee.UserRole;
 import com.example.leave_management.service.LeaveBalanceService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.core.io.ByteArrayResource;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -205,6 +207,14 @@ public class LeaveApplicationServiceImpl implements LeaveApplicationService {
                         case REJECTED -> Notification.NotificationType.LEAVE_REJECTED;
                         default -> Notification.NotificationType.LEAVE_PENDING;
                 };
+                List<Employee> adminEmployees = employeeRepository
+                                .findByRoleIn(Arrays.asList(UserRole.ADMIN, UserRole.MANAGER));
+                for (Employee adminEmployee : adminEmployees) {
+                        notificationService.sendLeaveStatusNotification(
+                                        adminEmployee.getId(),
+                                        Notification.NotificationType.LEAVE_WAITING_APPROVAL,
+                                        leaveDetails);
+                }
 
                 notificationService.sendLeaveStatusNotification(
                                 leaveApplication.getEmployee().getId(),

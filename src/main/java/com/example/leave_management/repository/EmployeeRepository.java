@@ -30,6 +30,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
     // Find users by role and status
     List<Employee> findByRoleAndStatus(UserRole role, UserStatus status);
 
+    // Find users by role in
+    List<Employee> findByRoleIn(List<UserRole> roles);
+
     // Check if email exists
     boolean existsByEmail(String email);
 

@@ -24,7 +24,7 @@ A comprehensive leave management system built with Spring Boot that allows emplo
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/fab-ryan/leave-management-system-Backend.git
 cd Leave-Management-System
 ```
 
@@ -58,8 +58,21 @@ security.jwt.expiration=3600000
 # Microsoft OAuth2 Configuration
 spring.security.oauth2.client.registration.microsoft.client-id=your_client_id
 spring.security.oauth2.client.registration.microsoft.client-secret=your_client_secret
-spring.security.oauth2.client.registration.microsoft.scope=openid,profile,email,User.Read,User.ReadBasic.All
-spring.security.oauth2.client.registration.microsoft.redirect-uri=http://localhost:5500/login/oauth2/code/microsoft
+# Microsoft Authentication
+microsoft.client-id=secret-id
+microsoft.client-secret=secret-key
+microsoft.redirect-uri=http://localhost:5500/api/auth/microsoft/callback
+```
+
+### Other Setups
+```
+allowed.email.domain=ist.com
+leave.management.year=2024
+file.upload-dir=./uploads
+server.servlet.context-path
+server.port=5500
+frontend.url=http://localhost:3000
+
 ```
 
 ### Email Configuration
@@ -85,6 +98,18 @@ spring.servlet.multipart.max-request-size=10MB
 # To disable for testing, use the 'test' profile
 ```
 
+### Database Initialization
+
+```
+The application uses PostgreSQL as its database. To initialize the admin user and necessary database structures, follow these steps:
+
+1. Ensure PostgreSQL is running on your system
+2. Create a database named `leave_management`
+3. Run the initialization script:
+ - chmod -x init-admin.sh
+ - then run ./init-admin.sh 
+```
+
 ## Running the Application
 
 1. Build the application:
@@ -97,7 +122,7 @@ mvn clean install
 mvn spring-boot:run
 ```
 
-The application will start on `http://localhost:8080`
+The application will start on `http://localhost:port`
 
 ## Testing
 
@@ -129,33 +154,7 @@ http://localhost:port/swagger-ui/index.html
 - Role-based Access Control
 - API Documentation (OpenAPI/Swagger)
 
-## Project Structure
 
-```
-src/
-├── main/
-│   ├── java/
-│   │   └── com/example/leave_management/
-│   │       ├── config/         # Configuration classes
-│   │       ├── controller/     # REST controllers
-│   │       ├── dto/           # Data Transfer Objects
-│   │       ├── exception/     # Custom exceptions
-│   │       ├── model/         # Entity classes
-│   │       ├── repository/    # Data repositories
-│   │       ├── service/       # Business logic
-│   │       └── util/          # Utility classes
-│   └── resources/
-│       ├── static/           # Static resources
-│       ├── templates/        # Email templates
-│       └── application.properties
-└── test/
-    └── java/
-        └── com/example/leave_management/
-            ├── config/       # Test configurations
-            ├── controller/   # Controller tests
-            ├── service/      # Service tests
-            └── repository/   # Repository tests
-```
 
 ## Security Considerations
 
@@ -190,62 +189,3 @@ src/
    - Verify SMTP settings
    - Check email credentials
    - Ensure proper port access
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Microsoft OAuth2 Configuration
-
-1. Register a new application in Azure Portal:
-   - Go to [Azure Portal](https://portal.azure.com)
-   - Navigate to "Azure Active Directory" > "App registrations"
-   - Click "New registration"
-   - Name: "LeaveFlow Management System"
-   - Supported account types: "Accounts in this organizational directory only"
-   - Redirect URI: "http://localhost:8080/login/oauth2/code/microsoft"
-   - Click "Register"
-
-2. Configure API Permissions:
-   - In your registered application, go to "API permissions"
-   - Click "Add a permission"
-   - Select "Microsoft Graph"
-   - Choose "Delegated permissions"
-   - Add the following permissions:
-     - `User.Read`
-     - `User.ReadBasic.All`
-     - `email`
-     - `profile`
-     - `openid`
-   - Click "Add permissions"
-   - Click "Grant admin consent" (requires admin privileges)
-
-3. Get Application Credentials:
-   - In your registered application, go to "Overview"
-   - Copy the "Application (client) ID"
-   - Go to "Certificates & secrets"
-   - Create a new client secret
-   - Copy the secret value immediately (it won't be shown again)
-
-4. Update Application Properties:
-   ```properties
-   # Microsoft OAuth2 Configuration
-   spring.security.oauth2.client.registration.microsoft.client-id=your_client_id
-   spring.security.oauth2.client.registration.microsoft.client-secret=your_client_secret
-   spring.security.oauth2.client.registration.microsoft.scope=openid,profile,email,User.Read,User.ReadBasic.All
-   spring.security.oauth2.client.registration.microsoft.redirect-uri=http://localhost:8080/login/oauth2/code/microsoft
-   ```
-
-5. Important Notes:
-   - The redirect URI must match exactly what you configured in Azure Portal
-   - Admin consent is required for the first time
-   - Make sure to use HTTPS in production
-   - Keep your client secret secure and never commit it to version control 

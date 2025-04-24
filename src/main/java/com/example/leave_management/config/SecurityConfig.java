@@ -37,17 +37,21 @@ public class SecurityConfig {
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-                http.cors(cors -> cors.configurationSource(request -> {
-                        CorsConfiguration config = new CorsConfiguration();
-                        config.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
-                        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                        config.setAllowedHeaders(Arrays.asList("*"));
-                        config.setAllowCredentials(true);
-                        return config;
-                }))
-                                .csrf(csrf -> csrf
-                                                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                                                .ignoringRequestMatchers("/api/auth/**", "/login", "/register"))
+                http
+                                .csrf(csrf -> csrf.disable())
+                                .cors(cors -> cors.configurationSource(request -> {
+                                        CorsConfiguration config = new CorsConfiguration();
+                                        config.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // Add your
+                                                                                                          // frontend
+                                                                                                          // URL
+                                        config.setAllowedMethods(
+                                                        Arrays.asList("*"));
+                                        config.setAllowedHeaders(Arrays.asList("*"));
+                                        config.setAllowCredentials(true);
+                                        config.setMaxAge(3600L);
+                                        return config;
+                                }))
+
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(
                                                                 "/api/auth/**",
@@ -61,9 +65,9 @@ public class SecurityConfig {
                                                                 "/error",
                                                                 "/auth/microsoft/**",
                                                                 "/profile-picture/**",
-                                                                "/uploads/profile/**")
+                                                                "/uploads/profile/**",
+                                                                "/profile/**")
                                                 .permitAll()
-                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                                 .anyRequest().authenticated())
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

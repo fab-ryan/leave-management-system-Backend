@@ -11,6 +11,7 @@ import com.example.leave_management.security.RequiresLogin;
 import com.example.leave_management.security.RequiresRole;
 import com.example.leave_management.service.AuthService;
 import com.example.leave_management.service.EmployeeService;
+import com.example.leave_management.service.FileStorageService;
 import com.example.leave_management.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -48,6 +49,9 @@ public class EmployeeController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private FileStorageService fileStorageService;
+
     private final Path profilePicturesPath = Paths.get("src/main/resources/uploads/profile");
 
     @PostMapping("/login")
@@ -64,7 +68,6 @@ public class EmployeeController {
     }
 
     @PutMapping("/employees/{userId}")
-    @RequiresLogin
     @RequiresRole({ UserRole.ADMIN, UserRole.MANAGER })
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Update user", description = "Updates an existing employee's information")
@@ -94,7 +97,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/employees/export")
-    @RequiresLogin
+    // @RequiresLogin
     @RequiresRole({ UserRole.ADMIN, UserRole.MANAGER })
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Export employees", description = "Exports employees to a CSV file")
@@ -110,7 +113,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/employees/leave-policy")
-    @RequiresLogin
+    // @RequiresLogin
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Employe Get current Policy")
     public ResponseEntity<ApiResponse<LeavePolicy>> employeeLeavePolicy(HttpServletRequest request) {
@@ -168,21 +171,17 @@ public class EmployeeController {
         return ResponseEntity.status(response.getStatus()).body(response);
     }
 
-    @GetMapping("/uploads/profile/{filename:.+}")
+    @GetMapping("profile/{filename:.+}")
     public ResponseEntity<Resource> getProfilePicture(@PathVariable String filename) {
-        try {
-            Path filePath = Paths.get("src/main/resources/uploads/profile").resolve(filename);
-            Resource resource = new UrlResource(filePath.toUri());
-
-            if (resource.exists() && resource.isReadable()) {
-                return ResponseEntity.ok()
-                        .contentType(MediaType.IMAGE_JPEG)
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
-                        .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (IOException e) {
+        filename = "profile/" + filename;
+        Resource file = fileStorageService.loadAsResource(filename);
+        if (file.exists() && file.isReadable()) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_JPEG)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
+                    .body(file);
+        } else {
+            System.out.println("file not found:" + filename);
             return ResponseEntity.notFound().build();
         }
     }
