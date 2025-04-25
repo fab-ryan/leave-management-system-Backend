@@ -17,6 +17,7 @@ import com.example.leave_management.util.JwtUtil;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -226,5 +227,19 @@ public class MicrosoftAuthService {
         } catch (Exception e) {
             System.out.println("Error removing profile picture: " + e.getMessage());
         }
+    }
+
+    public void reverseWithArrayList() {
+        ArrayList<Integer> numbers = new ArrayList<>();
+        numbers.add(1);
+        numbers.add(2);
+        numbers.add(3);
+        numbers.add(4);
+        numbers.add(5);
+
+        for (int i = numbers.size() - 1; i >= 0; i--) {
+            System.out.println(numbers.get(i));
+        }
+
     }
 }
